@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Workout">
+  <title>Workout Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { background: #1c1c1c; color: #e8e8e8; font-family: 'Courier New', monospace; min-height: 100vh; max-width: 540px; margin: 0 auto; padding-bottom: 48px; }
+    :root { --green: #4ade80; --green-dim: rgba(74,222,128,0.12); }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type=number] { -moz-appearance: textfield; }
+
+    /* Header */
+    #header { display:flex; justify-content:space-between; align-items:center; padding:20px 18px 14px; border-bottom:1px solid #2a2a2a; background:#1c1c1c; position:sticky; top:0; z-index:10; }
+    #header-title { font-size:17px; font-weight:700; color:var(--green); letter-spacing:-0.2px; }
+    #header-date { font-size:10px; color:#555; margin-top:3px; text-transform:uppercase; letter-spacing:0.1em; }
+    .header-btn { background:#252525; border:1px solid #333; color:var(--green); padding:7px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-family:inherit; font-weight:600; }
+    .back-btn { background:#252525; border:1px solid #333; color:#ccc; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:12px; font-family:inherit; }
+
+    /* Tabs */
+    #tab-row { display:flex; gap:6px; padding:12px 14px; overflow-x:auto; border-bottom:1px solid #252525; scrollbar-width:none; }
+    #tab-row::-webkit-scrollbar { display:none; }
+    .tab { display:flex; align-items:center; gap:4px; padding:8px 12px; border-radius:10px; cursor:pointer; font-family:inherit; white-space:nowrap; transition:all 0.15s; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.05); color:#999; font-size:11px; }
+    .tab.active { background:var(--green); color:#111; font-weight:700; border:none; }
+    .tab-label { display:flex; flex-direction:column; align-items:flex-start; line-height:1.2; }
+    .tab-day { font-size:9px; opacity:0.65; }
+    .tab-split { font-size:11px; }
+    .tab-dot { width:5px; height:5px; border-radius:50%; background:var(--green); margin-left:4px; }
+    .tab.active .tab-dot { background:#111; }
+
+    /* Duration bar */
+    #duration-bar { padding:8px 16px 0; font-size:10px; color:#555; text-transform:uppercase; letter-spacing:0.08em; }
+
+    /* Exercise list */
+    #exercise-list { padding:10px 14px; display:flex; flex-direction:column; gap:8px; }
+
+    /* Divider */
+    .core-divider { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+    .core-divider-line { flex:1; height:1px; background:#2a2a2a; }
+    .core-divider-label { font-size:10px; color:#555; text-transform:uppercase; letter-spacing:0.1em; white-space:nowrap; }
+
+    /* Card */
+    .ex-card { border-radius:12px; padding:13px 14px; border:1px solid #2e2e2e; background:#222; transition:border-color 0.15s; }
+    .ex-card.core-card { background:rgba(74,222,128,0.04); border-color:rgba(74,222,128,0.15); }
+    .ex-card.open { border-color:rgba(74,222,128,0.3); }
+
+    /* Card header button */
+    .ex-header { width:100%; background:none; border:none; padding:0; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; text-align:left; }
+    .ex-name { font-size:13px; font-weight:600; color:#e0e0e0; }
+    .ex-name.core { color:var(--green); }
+    .ex-meta { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:2px; }
+    .ex-reps { font-size:10px; color:#555; }
+    .pr-pill { font-size:10px; color:var(--green); background:var(--green-dim); padding:1px 6px; border-radius:4px; }
+    .filled-badge { font-size:10px; color:#888; }
+    .logged-badge { font-size:10px; color:var(--green); }
+    .chevron { color:#555; font-size:14px; transition:transform 0.2s; display:inline-block; line-height:1; }
+    .chevron.open { transform:rotate(180deg); }
+
+    /* Tip */
+    .tip-row { display:flex; align-items:flex-start; gap:10px; margin-top:10px; padding-top:10px; border-top:1px solid #2a2a2a; }
+    .tip-diagram { flex-shrink:0; width:90px; opacity:0.7; }
+    .tip-text { margin:0; font-size:11px; color:#666; line-height:1.6; flex:1; }
+
+    /* Accordion body */
+    .ex-body { margin-top:12px; }
+
+    /* History */
+    .history-box { background:#1a1a1a; border-radius:8px; padding:10px 12px; border:1px solid #2a2a2a; margin-bottom:12px; }
+    .history-label { font-size:10px; color:#555; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:8px; }
+    .history-sets { display:flex; gap:6px; }
+    .history-set { flex:1; background:#222; border-radius:6px; padding:6px 8px; text-align:center; }
+    .history-set-num { font-size:9px; color:#555; margin-bottom:3px; }
+    .history-set-w { font-size:13px; font-weight:700; }
+    .history-set-unit { font-size:10px; color:#555; }
+    .history-set-r { font-size:11px; color:#666; margin-top:2px; }
+    .no-history { font-size:11px; color:#444; text-align:center; padding:4px 0; }
+
+    /* Set inputs */
+    .set-inputs { display:flex; gap:6px; margin-bottom:10px; }
+    .set-col { flex:1; background:#2a2a2a; border-radius:8px; padding:8px 8px 6px; display:flex; flex-direction:column; gap:5px; }
+    .set-label { font-size:10px; color:#555; text-align:center; margin-bottom:2px; }
+    .set-input { background:#333; border:1px solid #3a3a3a; border-radius:6px; color:#e8e8e8; padding:6px; font-size:13px; font-family:inherit; width:100%; outline:none; text-align:center; }
+    .log-btn { padding:9px; border-radius:8px; border:none; cursor:pointer; font-size:13px; font-weight:700; font-family:inherit; color:#111; width:100%; background:var(--green); transition:background 0.2s; }
+    .log-btn.saved { background:#22c55e; }
+
+    /* Progress view */
+    #progress-view { padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+    .progress-card { background:#222; border:1px solid #2e2e2e; border-radius:12px; padding:14px 16px; }
+    .progress-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+    .progress-ex-name { font-size:13px; font-weight:600; color:#e0e0e0; flex:1; }
+    .progress-pr { font-size:11px; background:var(--green-dim); color:var(--green); padding:2px 8px; border-radius:5px; font-weight:600; white-space:nowrap; }
+    .progress-stats { display:flex; gap:10px; }
+    .stat-box { flex:1; background:#252525; border-radius:8px; padding:8px 10px; }
+    .stat-label { font-size:9px; color:#555; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:3px; }
+    .stat-val { font-size:15px; font-weight:700; }
+    .stat-val.dim { color:#888; }
+    .stat-val.bright { color:#e0e0e0; }
+    .stat-date { font-size:10px; color:#444; margin-top:2px; }
+    .stat-arrow { display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:44px; }
+    .arrow-icon { font-size:18px; line-height:1; }
+    .arrow-pct { font-size:11px; font-weight:700; }
+    .up { color:var(--green); }
+    .down { color:#f87171; }
+    .empty-state { text-align:center; color:#444; padding:48px 20px; font-size:14px; }
+
+    /* SVG diagrams inline */
+    .diagram-svg { width:100%; max-width:150px; height:60px; }
+  </style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+const GREEN = '#4ade80';
+
+const TIPS = {
+  "Dumbbell Bench Press": "Lie flat on a bench, dumbbells at chest level with elbows at 45 degrees. Press up until arms are fully extended, then lower with control.",
+  "Incline Dumbbell Press": "Set bench to 30-45 degrees. Press dumbbells from upper chest upward, keeping wrists stacked over elbows throughout the movement.",
+  "Chest Fly Machine": "Sit with back flat against the pad and elbows on the arm pads at shoulder height. Bring the pads together squeezing your chest at the peak, then return slowly to a full stretch.",
+  "Dumbbell Shoulder Press": "Sit upright, dumbbells at ear height with palms forward. Press straight overhead until arms lock out, then lower back to starting position.",
+  "Cable Tricep Pushdown": "Stand at cable machine, elbows pinned to sides. Push the bar or rope down until arms are fully extended, squeezing triceps at the bottom.",
+  "Plank Hold": "Forearms on floor, body in a straight line from head to heels. Brace your core and glutes - avoid letting hips sag or rise.",
+  "Lat Pulldown Machine": "Grip bar slightly wider than shoulder width. Pull down to upper chest while leaning back slightly, squeezing lats at the bottom. Control the return.",
+  "Cable Row Machine": "Sit tall with a slight lean back, feet on platform. Pull handles to lower ribcage, driving elbows back. Pause briefly, then extend slowly.",
+  "Dumbbell Row (Single Arm)": "Brace one hand and knee on a bench. Pull the dumbbell to your hip, leading with your elbow not your hand. Keep your back flat.",
+  "Dumbbell Curl": "Stand with dumbbells at your sides, palms forward. Curl up by flexing the elbow only - avoid swinging your torso to generate momentum.",
+  "Hammer Curl": "Hold dumbbells with a neutral grip (thumbs up). Curl upward keeping palms facing each other - this targets the brachialis and forearm.",
+  "Leg Raise": "Lie flat, hands under your lower back. Keep legs straight as you raise them to 90 degrees, then lower slowly without letting feet touch the floor.",
+  "Leg Press Machine": "Feet shoulder-width on the platform. Lower the sled until knees reach 90 degrees, then press back to near-full extension - do not lock knees out hard.",
+  "Dumbbell Split Squat": "Stand in a staggered stance, one foot forward and one back. Lower your back knee straight down toward the floor, keeping your front shin vertical. Drive through your front heel to return.",
+  "Leg Curl Machine": "Lie face down with pad just above your heels. Curl your heels toward your glutes, pause briefly at the top, then lower slowly.",
+  "Leg Extension Machine": "Sit upright with pad on lower shins. Extend legs to full lockout, squeeze quads for a moment, then lower under control.",
+  "Dumbbell Calf Raise": "Stand with dumbbells at sides, balls of feet on an edge. Rise as high as possible onto tiptoes, pause, then lower fully for a deep stretch.",
+  "Dumbbell Russian Twist": "Sit with knees bent, lean back slightly. Holding a dumbbell with both hands, rotate side to side touching the weight to the floor each rep.",
+  "Dumbbell Lateral Raise": "Stand with dumbbells at sides, slight elbow bend. Raise arms out to shoulder height - lead with elbows not wrists. Lower with control.",
+  "Arnold Press": "Start with dumbbells at chin height, palms facing you. As you press overhead rotate palms forward. Reverse the rotation on the way down.",
+  "Cable Crossover": "Stand centered between two cable stations set at chest height. Pull both handles together in a wide arc, crossing them slightly at center and squeezing the chest hard. Return slowly under control.",
+  "Cable Chest Fly": "Set cables at chest height, one handle in each hand. Step forward slightly, then bring both handles together in a smooth arc keeping a soft elbow bend. Squeeze at center, then open back out.",
+  "Overhead Tricep Extension": "Hold one dumbbell with both hands overhead. Lower it behind your head bending only at the elbows, then press back to full extension.",
+  "Dumbbell Side Bend": "Stand holding a dumbbell in one hand. Bend directly sideways toward the weight, then use your oblique to pull back upright. Do all reps one side at a time.",
+  "Incline Dumbbell Row": "Set bench to 30-45 degrees, lie chest-down. Row both dumbbells to your hips with elbows slightly flared, squeezing upper back at the top.",
+  "Dumbbell Pullover": "Lie across a bench, holding one dumbbell overhead with both hands. Lower it behind your head in a wide arc feeling a lat stretch, then pull back over.",
+  "Dumbbell Shrug": "Stand with dumbbells at sides. Shrug shoulders straight up toward your ears, hold briefly at the top, then lower fully. No rolling the shoulders.",
+  "Spider Curl": "Lie chest-down on an incline bench set to 45 degrees, arms hanging straight down. Curl both dumbbells up toward your shoulders keeping upper arms vertical - this isolates the bicep peak.",
+  "Reverse Curl": "Hold dumbbells with an overhand grip (palms down). Curl upward keeping the overhand position - this works the brachialis and forearm extensors.",
+  "Dumbbell Woodchop": "Hold one dumbbell with both hands. Rotate and pull diagonally from low to high across your body, engaging your core throughout the movement.",
+};
+
+const DIAGRAMS = {
+  "Dumbbell Bench Press": `<svg viewBox="0 0 120 60" class="diagram-svg"><line x1="20" y1="30" x2="100" y2="30" stroke="#333" stroke-width="8" stroke-linecap="round"/><circle cx="60" cy="18" r="7" fill="none" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="25" x2="60" y2="42" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="32" x2="40" y2="24" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="32" x2="80" y2="24" stroke="#4ade80" stroke-width="2"/><circle cx="35" cy="22" r="4" fill="#555" stroke="#4ade80" stroke-width="1.5"/><circle cx="85" cy="22" r="4" fill="#555" stroke="#4ade80" stroke-width="1.5"/><line x1="60" y1="42" x2="52" y2="55" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="42" x2="68" y2="55" stroke="#4ade80" stroke-width="2"/></svg>`,
+  "Incline Dumbbell Press": `<svg viewBox="0 0 120 60" class="diagram-svg"><line x1="20" y1="38" x2="100" y2="22" stroke="#333" stroke-width="8" stroke-linecap="round"/><circle cx="60" cy="14" r="7" fill="none" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="21" x2="60" y2="38" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="28" x2="40" y2="22" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="28" x2="80" y2="18" stroke="#4ade80" stroke-width="2"/><circle cx="35" cy="20" r="4" fill="#555" stroke="#4ade80" stroke-width="1.5"/><circle cx="83" cy="15" r="4" fill="#555" stroke="#4ade80" stroke-width="1.5"/><line x1="60" y1="38" x2="52" y2="54" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="38" x2="68" y2="54" stroke="#4ade80" stroke-width="2"/></svg>`,
+  "Plank Hold": `<svg viewBox="0 0 140 60" class="diagram-svg"><line x1="10" y1="50" x2="130" y2="50" stroke="#333" stroke-width="2"/><circle cx="115" cy="28" r="7" fill="none" stroke="#4ade80" stroke-width="2"/><line x1="108" y1="33" x2="20" y2="40" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round"/><line x1="20" y1="40" x2="20" y2="50" stroke="#4ade80" stroke-width="2"/><line x1="35" y1="41" x2="35" y2="50" stroke="#4ade80" stroke-width="2"/><line x1="108" y1="40" x2="108" y2="50" stroke="#4ade80" stroke-width="2"/><line x1="95" y1="40" x2="95" y2="50" stroke="#4ade80" stroke-width="2"/></svg>`,
+  "Leg Raise": `<svg viewBox="0 0 140 70" class="diagram-svg"><line x1="10" y1="45" x2="130" y2="45" stroke="#333" stroke-width="2"/><circle cx="25" cy="28" r="7" fill="none" stroke="#4ade80" stroke-width="2"/><line x1="25" y1="35" x2="90" y2="43" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round"/><line x1="90" y1="43" x2="120" y2="20" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round"/><line x1="25" y1="35" x2="25" y2="45" stroke="#4ade80" stroke-width="2"/></svg>`,
+  "Dumbbell Curl": `<svg viewBox="0 0 80 80" class="diagram-svg"><circle cx="40" cy="12" r="7" fill="none" stroke="#4ade80" stroke-width="2"/><line x1="40" y1="19" x2="40" y2="45" stroke="#4ade80" stroke-width="2"/><line x1="40" y1="28" x2="20" y2="38" stroke="#4ade80" stroke-width="2"/><line x1="20" y1="38" x2="15" y2="25" stroke="#4ade80" stroke-width="2"/><circle cx="14" cy="22" r="4" fill="#555" stroke="#4ade80" stroke-width="1.5"/><line x1="40" y1="28" x2="60" y2="42" stroke="#4ade80" stroke-width="2"/><circle cx="62" cy="46" r="4" fill="#555" stroke="#4ade80" stroke-width="1.5"/><line x1="40" y1="45" x2="33" y2="68" stroke="#4ade80" stroke-width="2"/><line x1="40" y1="45" x2="47" y2="68" stroke="#4ade80" stroke-width="2"/></svg>`,
+  "Hammer Curl": `<svg viewBox="0 0 80 80" class="diagram-svg"><circle cx="40" cy="12" r="7" fill="none" stroke="#4ade80" stroke-width="2"/><line x1="40" y1="19" x2="40" y2="45" stroke="#4ade80" stroke-width="2"/><line x1="40" y1="28" x2="20" y2="42" stroke="#4ade80" stroke-width="2"/><line x1="20" y1="42" x2="20" y2="28" stroke="#4ade80" stroke-width="2"/><circle cx="20" cy="26" r="4" fill="#555" stroke="#4ade80" stroke-width="1.5"/><line x1="40" y1="28" x2="60" y2="42" stroke="#4ade80" stroke-width="2"/><circle cx="60" cy="44" r="4" fill="#555" stroke="#4ade80" stroke-width="1.5"/><line x1="40" y1="45" x2="33" y2="68" stroke="#4ade80" stroke-width="2"/><line x1="40" y1="45" x2="47" y2="68" stroke="#4ade80" stroke-width="2"/></svg>`,
+  "Lat Pulldown Machine": `<svg viewBox="0 0 120 90" class="diagram-svg"><line x1="10" y1="8" x2="110" y2="8" stroke="#555" stroke-width="3" stroke-linecap="round"/><line x1="30" y1="8" x2="30" y2="22" stroke="#4ade80" stroke-width="2"/><line x1="90" y1="8" x2="90" y2="22" stroke="#4ade80" stroke-width="2"/><circle cx="60" cy="30" r="7" fill="none" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="37" x2="60" y2="62" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="44" x2="30" y2="26" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="44" x2="90" y2="26" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="62" x2="48" y2="82" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="62" x2="72" y2="82" stroke="#4ade80" stroke-width="2"/></svg>`,
+};
+
+const DEFAULT_SVG = `<svg viewBox="0 0 120 70" class="diagram-svg"><circle cx="60" cy="14" r="7" fill="none" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="21" x2="60" y2="46" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="30" x2="38" y2="42" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="30" x2="82" y2="42" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="46" x2="48" y2="66" stroke="#4ade80" stroke-width="2"/><line x1="60" y1="46" x2="72" y2="66" stroke="#4ade80" stroke-width="2"/><circle cx="36" cy="44" r="4" fill="#555" stroke="#4ade80" stroke-width="1.5"/><circle cx="84" cy="44" r="4" fill="#555" stroke="#4ade80" stroke-width="1.5"/></svg>`;
+
+const DAYS = [
+  { key:"mon", label:"Monday", split:"Push A", exercises:[
+    {name:"Dumbbell Bench Press", reps:"8-10"},
+    {name:"Incline Dumbbell Press", reps:"10-12"},
+    {name:"Chest Fly Machine", reps:"10-12"},
+    {name:"Dumbbell Shoulder Press", reps:"10-12"},
+    {name:"Cable Tricep Pushdown", reps:"12-15"},
+    {name:"Plank Hold", reps:"30-45s", core:true},
+  ]},
+  { key:"tue", label:"Tuesday", split:"Pull A", exercises:[
+    {name:"Lat Pulldown Machine", reps:"8-10"},
+    {name:"Cable Row Machine", reps:"10-12"},
+    {name:"Dumbbell Row (Single Arm)", reps:"10-12"},
+    {name:"Dumbbell Curl", reps:"10-12"},
+    {name:"Hammer Curl", reps:"12-15"},
+    {name:"Leg Raise", reps:"15-20", core:true},
+  ]},
+  { key:"wed", label:"Wednesday", split:"Legs", exercises:[
+    {name:"Leg Press Machine", reps:"10-12"},
+    {name:"Dumbbell Split Squat", reps:"10 each"},
+    {name:"Leg Curl Machine", reps:"10-12"},
+    {name:"Leg Extension Machine", reps:"12-15"},
+    {name:"Dumbbell Calf Raise", reps:"15-20"},
+    {name:"Dumbbell Russian Twist", reps:"20 total", core:true},
+  ]},
+  { key:"thu", label:"Thursday", split:"Push B", exercises:[
+    {name:"Dumbbell Lateral Raise", reps:"12-15"},
+    {name:"Arnold Press", reps:"10-12"},
+    {name:"Cable Crossover", reps:"10-12"},
+    {name:"Cable Chest Fly", reps:"12-15"},
+    {name:"Overhead Tricep Extension", reps:"12-15"},
+    {name:"Dumbbell Side Bend", reps:"15 each", core:true},
+  ]},
+  { key:"fri", label:"Friday", split:"Pull B", exercises:[
+    {name:"Incline Dumbbell Row", reps:"10-12"},
+    {name:"Dumbbell Pullover", reps:"12-15"},
+    {name:"Dumbbell Shrug", reps:"12-15"},
+    {name:"Spider Curl", reps:"12 each"},
+    {name:"Reverse Curl", reps:"12-15"},
+    {name:"Dumbbell Woodchop", reps:"12 each", core:true},
+  ]},
+];
+
+const STORAGE_KEY = 'workout_tracker_v5';
+
+// State
+let state = {
+  activeKey: 'mon',
+  logs: JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'),
+  open: {},
+  draft: {},
+  flash: null,
+  view: 'log',
+};
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.logs));
+}
+
+function getPR(ex) {
+  let best = null;
+  for (const e of (state.logs[ex] || [])) {
+    for (const s of e.sets) {
+      if (s.w > 0 && (!best || s.w > best.w)) best = {w:s.w, r:s.r, date:e.date};
+    }
+  }
+  return best;
+}
+
+function entryBest(entry) {
+  const ws = entry.sets.map(s=>s.w).filter(w=>w>0);
+  return ws.length ? Math.max(...ws) : 0;
+}
+
+function getProgressPct(ex) {
+  const entries = [...(state.logs[ex]||[])].sort((a,b)=>a.timestamp-b.timestamp);
+  if (entries.length < 2) return null;
+  const first = entryBest(entries[0]);
+  const latest = entryBest(entries[entries.length-1]);
+  if (!first) return null;
+  return ((latest-first)/first)*100;
+}
+
+function today() {
+  return new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+function render() {
+  const app = document.getElementById('app');
+  if (state.view === 'progress') {
+    app.innerHTML = renderProgress();
+  } else {
+    app.innerHTML = renderLog();
+  }
+  attachEvents();
+}
+
+function renderProgress() {
+  const allEx = DAYS.flatMap(d=>d.exercises.map(e=>e.name));
+  const logged = allEx.filter(ex=>(state.logs[ex]||[]).length>0);
+  let cards = '';
+  if (logged.length === 0) {
+    cards = '<div class="empty-state">No sets logged yet. Start lifting!</div>';
+  } else {
+    for (const ex of logged) {
+      const pr = getPR(ex);
+      const pct = getProgressPct(ex);
+      const entries = [...(state.logs[ex]||[])].sort((a,b)=>a.timestamp-b.timestamp);
+      const firstW = entryBest(entries[0]);
+      const latestW = entryBest(entries[entries.length-1]);
+      const up = pct !== null && pct >= 0;
+      const pctHtml = pct !== null
+        ? `<div class="arrow-icon ${up?'up':'down'}">${up?'&#9650;':'&#9660;'}</div><div class="arrow-pct ${up?'up':'down'}">${Math.abs(pct).toFixed(1)}%</div>`
+        : '<div style="font-size:11px;color:#444">--</div>';
+      cards += `
+        <div class="progress-card">
+          <div class="progress-card-top">
+            <span class="progress-ex-name">${ex}</span>
+            ${pr ? `<span class="progress-pr">PR ${pr.w} lbs x ${pr.r}</span>` : ''}
+          </div>
+          <div class="progress-stats">
+            <div class="stat-box">
+              <div class="stat-label">First</div>
+              <div class="stat-val dim">${firstW ? firstW+' lbs' : '--'}</div>
+              <div class="stat-date">${entries[0]?entries[0].date:''}</div>
+            </div>
+            <div class="stat-arrow">${pctHtml}</div>
+            <div class="stat-box">
+              <div class="stat-label">Latest</div>
+              <div class="stat-val bright">${latestW ? latestW+' lbs' : '--'}</div>
+              <div class="stat-date">${entries[entries.length-1]?entries[entries.length-1].date:''}</div>
+            </div>
+          </div>
+        </div>`;
+    }
+  }
+  return `
+    <div id="header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="back-btn" onclick="goLog()">Back</button>
+        <span id="header-title">Overall Progress</span>
+      </div>
+    </div>
+    <div id="progress-view">${cards}</div>`;
+}
+
+function renderLog() {
+  const day = DAYS.find(d=>d.key===state.activeKey);
+  const todayStr = today();
+
+  // Tabs
+  let tabs = '';
+  for (const d of DAYS) {
+    const isActive = d.key === state.activeKey;
+    const hasLogs = d.exercises.some(e=>(state.logs[e.name]||[]).length>0);
+    tabs += `<button class="tab${isActive?' active':''}" onclick="setDay('${d.key}')">
+      <div class="tab-label">
+        <span class="tab-day">${d.label}</span>
+        <span class="tab-split">${d.split}</span>
+      </div>
+      ${hasLogs ? '<span class="tab-dot"></span>' : ''}
+    </button>`;
+  }
+
+  // Exercises
+  let exHtml = '';
+  for (let idx=0; idx<day.exercises.length; idx++) {
+    const ex = day.exercises[idx];
+    const name = ex.name;
+    const isLast = idx === day.exercises.length-1;
+    const isOpen = !!state.open[name];
+    const pr = getPR(name);
+    const lastEntry = (state.logs[name]||[])[0] || null;
+    const isFlash = state.flash === name;
+    const d = state.draft[name] || {};
+    const filled = [0,1,2].filter(i=>d[i]&&(d[i].w||d[i].r)).length;
+    const tip = TIPS[name];
+    const diagram = DIAGRAMS[name] || DEFAULT_SVG;
+
+    const divider = isLast ? `
+      <div class="core-divider">
+        <div class="core-divider-line"></div>
+        <span class="core-divider-label">Core Cooldown</span>
+        <div class="core-divider-line"></div>
+      </div>` : '';
+
+    const metaBadges = `
+      <span class="ex-reps">3 x ${ex.reps}</span>
+      ${pr ? `<span class="pr-pill">PR ${pr.w} lbs</span>` : ''}
+      ${filled>0&&!isFlash ? `<span class="filled-badge">${filled}/3</span>` : ''}
+      ${isFlash ? `<span class="logged-badge">Logged!</span>` : ''}`;
+
+    const tipHtml = tip ? `
+      <div class="tip-row">
+        <div class="tip-diagram">${diagram}</div>
+        <p class="tip-text">${tip}</p>
+      </div>` : '';
+
+    let bodyHtml = '';
+    if (isOpen) {
+      // History
+      let histSets = '';
+      if (!lastEntry) {
+        histSets = '<div class="no-history">No history yet</div>';
+      } else {
+        let setBoxes = '';
+        for (let i=0;i<3;i++) {
+          const s = lastEntry.sets[i] || {w:0,r:0};
+          setBoxes += `<div class="history-set">
+            <div class="history-set-num">Set ${i+1}</div>
+            <div class="history-set-w" style="color:${s.w?'#e0e0e0':'#444'}">${s.w||'--'}</div>
+            <div class="history-set-unit">${s.w?'lbs':''}</div>
+            <div class="history-set-r">${s.r?s.r+' reps':'--'}</div>
+          </div>`;
+        }
+        histSets = `<div class="history-sets">${setBoxes}</div>`;
+      }
+
+      // Set inputs
+      let setInputs = '';
+      for (let i=0;i<3;i++) {
+        const w = (d[i]&&d[i].w) ? d[i].w : '';
+        const r = (d[i]&&d[i].r) ? d[i].r : '';
+        setInputs += `<div class="set-col">
+          <div class="set-label">Set ${i+1}</div>
+          <input class="set-input" type="number" placeholder="lbs" value="${w}" data-ex="${name}" data-idx="${i}" data-field="w" oninput="setDraft(this)">
+          <input class="set-input" type="number" placeholder="reps" value="${r}" data-ex="${name}" data-idx="${i}" data-field="r" oninput="setDraft(this)">
+        </div>`;
+      }
+
+      bodyHtml = `<div class="ex-body">
+        <div class="history-box">
+          <div class="history-label">${lastEntry ? 'Last session | '+lastEntry.date : 'Last session'}</div>
+          ${histSets}
+        </div>
+        <div class="set-inputs">${setInputs}</div>
+        <button class="log-btn${isFlash?' saved':''}" onclick="logEx('${name}')">${isFlash?'Saved!':'Save All Sets'}</button>
+      </div>`;
+    }
+
+    exHtml += `${divider}
+      <div class="ex-card${ex.core?' core-card':''}${isOpen?' open':''}" id="card-${btoa(name).replace(/=/g,'')}">
+        <button class="ex-header" onclick="toggleEx('${name}')">
+          <div>
+            <div class="ex-name${ex.core?' core':''}">${name}</div>
+            <div class="ex-meta">${metaBadges}</div>
+          </div>
+          <span class="chevron${isOpen?' open'}">&#9660;</span>
+        </button>
+        ${tipHtml}
+        ${bodyHtml}
+      </div>`;
+  }
+
+  return `
+    <div id="header">
+      <div>
+        <div id="header-title">Workout Tracker</div>
+        <div id="header-date">${todayStr}</div>
+      </div>
+      <button class="header-btn" onclick="goProgress()">Progress</button>
+    </div>
+    <div id="tab-row">${tabs}</div>
+    <div id="duration-bar">45-50 min &nbsp;|&nbsp; 5 main + 1 core &nbsp;|&nbsp; 3 sets each</div>
+    <div id="exercise-list">${exHtml}</div>`;
+}
+
+function attachEvents() {}
+
+function setDay(key) {
+  state.activeKey = key;
+  state.open = {};
+  render();
+}
+
+function toggleEx(name) {
+  state.open[name] = !state.open[name];
+  render();
+}
+
+function setDraft(el) {
+  const name = el.dataset.ex;
+  const idx = parseInt(el.dataset.idx);
+  const field = el.dataset.field;
+  if (!state.draft[name]) state.draft[name] = {};
+  if (!state.draft[name][idx]) state.draft[name][idx] = {};
+  state.draft[name][idx][field] = el.value;
+}
+
+function logEx(name) {
+  const d = state.draft[name] || {};
+  const sets = [0,1,2].map(i=>({
+    w: parseFloat((d[i]&&d[i].w)||0)||0,
+    r: parseInt((d[i]&&d[i].r)||0)||0
+  }));
+  if (sets.every(s=>s.w===0&&s.r===0)) return;
+  const entry = {date:today(), sets, timestamp:Date.now()};
+  if (!state.logs[name]) state.logs[name] = [];
+  state.logs[name].unshift(entry);
+  state.draft[name] = {};
+  save();
+  state.flash = name;
+  render();
+  setTimeout(()=>{ state.flash=null; render(); }, 1600);
+}
+
+function goProgress() { state.view='progress'; render(); }
+function goLog() { state.view='log'; render(); }
+
+render();
+</script>
+</body>
+</html>
